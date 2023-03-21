@@ -1,0 +1,4 @@
+github.com/CherkashinEvgeny/gogen v1.0.0-alpha-2e206cde013ef523048d0067cb126abc924b6b6c h1:PiovyERP+nL7xzkSYbym76W5Wx41BC2S73BT7ohLt98=
+github.com/CherkashinEvgeny/gogen v1.0.0-alpha-2e206cde013ef523048d0067cb126abc924b6b6c/go.mod h1:14Gn8vk+t+wJRo8vx/8P2kXS4DcSHfCXoQ71X0o5pqo=
+github.com/pkg/errors v0.9.1 h1:FEBLx1zS214owpjy7qsBeixbURkuhQAwrK5UwLGTwt4=
+github.com/pkg/errors v0.9.1/go.mod h1:bwawxfHBFNV+L2hUp1rHADufV3IMtnDRdf1r5NINEl0=
