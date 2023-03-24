@@ -110,26 +110,9 @@ func generateChainElem(elemName string, pkg *types.Package, chainCfg chainConfig
 
 func generateChainElemMethods(elemName string, iface *types.Interface) Code {
 	methods := make([]Code, 0)
-	n := iface.NumEmbeddeds()
-	for i := 0; i < n; i++ {
-		embedded := iface.EmbeddedType(i)
-		underlying := embedded.Underlying()
-		embeddedIface, ok := underlying.(*types.Interface)
-		if !ok {
-			continue
-		}
-		methods = append(methods, generateChainElemMethods(elemName, embeddedIface))
-	}
-	n = iface.NumMethods()
-	for i := 0; i < n; i++ {
-		method := iface.Method(i)
-		methodType := method.Type()
-		sign, ok := methodType.(*types.Signature)
-		if !ok {
-			continue
-		}
-		methods = append(methods, generateChainElemMethod(elemName, method.Name(), sign))
-	}
+	tgen.ForEachInterfaceMethod(iface, func(name string, sign *types.Signature) {
+		methods = append(methods, generateChainElemMethod(elemName, name, sign))
+	})
 	return Blocks(methods...)
 }
 
@@ -144,7 +127,7 @@ func generateChainElemMethod(elemName string, name string, sign *types.Signature
 
 func generateChainElemMethodSignature(sign *types.Signature) Code {
 	params := sign.Params()
-	paramsNames := utils.ParamIds(params.Len())
+	paramsNames := utils.InIds(params.Len())
 	n := params.Len()
 	in := make([]Code, 0, n)
 	if sign.Variadic() {
@@ -174,7 +157,7 @@ func generateChainElemMethodBody(
 	sign *types.Signature,
 ) Code {
 	params := sign.Params()
-	paramsNames := utils.ParamIds(params.Len())
+	paramsNames := utils.InIds(params.Len())
 	results := sign.Results()
 	implCall := Call(
 		Join(Raw("e.impl."), Id(name)),
