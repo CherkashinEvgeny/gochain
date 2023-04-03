@@ -116,6 +116,9 @@ func resolvePackagePath(path string) (string, error) {
 	cmd.Stderr = stderr
 	err := cmd.Run()
 	if err != nil {
+		if stderr.Len() > 0 {
+			return "", errors.New(string(stderr.Bytes()))
+		}
 		return "", err
 	}
 	var stdoutJson struct {
@@ -124,9 +127,6 @@ func resolvePackagePath(path string) (string, error) {
 	err = json.Unmarshal(stdout.Bytes(), &stdoutJson)
 	if err != nil {
 		return "", err
-	}
-	if stderr.Len() > 0 {
-		return "", errors.Errorf("stderr: %s", string(stderr.Bytes()))
 	}
 	return stdoutJson.ImportPath, nil
 }
