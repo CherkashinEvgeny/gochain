@@ -1,16 +1,14 @@
 package main
 
 import (
-	"bytes"
-	"encoding/json"
 	"flag"
 	"fmt"
+	"go/build"
 	"go/importer"
 	"go/token"
 	"go/types"
 	"io"
 	"os"
-	"os/exec"
 	"path"
 	"strings"
 
@@ -41,22 +39,23 @@ func main() {
 		printError("failed to parse package", err)
 		return
 	}
-	var dstPkg *types.Package
+	var dstPkg *build.Package
 	if *dstPkgPathFlag != "" {
-		dstPkg, err = parsePackage(*dstPkgPathFlag)
+		dstPkg, err = findPackage(*dstPkgPathFlag)
 	} else if *dstFileFlag != "" {
 		dstPkgDir, _ := path.Split(*dstFileFlag)
-		dstPkg, err = parsePackageInDir(dstPkgDir)
+		dstPkg, err = findPackageInDir(dstPkgDir)
 	}
+	// ignore destination package errors
 	if err != nil {
-		printError("failed to resolve destination package", err)
-		return
+		dstPkg = nil
+		err = nil
 	}
 	var dstPkgName string
 	if *dstPkgFlag != "" {
 		dstPkgName = *dstPkgFlag
 	} else if dstPkg != nil {
-		dstPkgName = dstPkg.Name()
+		dstPkgName = dstPkg.Name
 	} else {
 		dstPkgName = srcPkg.Name()
 	}
@@ -64,7 +63,7 @@ func main() {
 	if *dstPkgPathFlag != "" {
 		dstPkgPath = *dstPkgPathFlag
 	} else if dstPkg != nil {
-		dstPkgPath = dstPkg.Path()
+		dstPkgPath = dstPkg.ImportPath
 	} else {
 		dstPkgPath = srcPkg.Path()
 	}
@@ -102,55 +101,12 @@ func main() {
 	}
 }
 
-func parsePackageInDir(dir string) (*types.Package, error) {
-	ok, err := isGoPackage(dir)
-	if err != nil {
-		return nil, err
-	}
-	if !ok {
-		return nil, nil
-	}
-	pkgPath, err := resolvePackagePath(dir)
-	if err != nil {
-		return nil, err
-	}
-	return parsePackage(pkgPath)
+func findPackage(path string) (pkg *build.Package, err error) {
+	return build.Import(path, ".", build.ImportComment)
 }
 
-func isGoPackage(dir string) (found bool, err error) {
-	entries, err := os.ReadDir(dir)
-	if err != nil {
-		return false, err
-	}
-	for _, entry := range entries {
-		if strings.HasSuffix(entry.Name(), ".go") {
-			return true, nil
-		}
-	}
-	return false, nil
-}
-
-func resolvePackagePath(path string) (string, error) {
-	stdout := bytes.NewBuffer(nil)
-	stderr := bytes.NewBuffer(nil)
-	cmd := exec.Command("go", "list", "-json", path)
-	cmd.Stdout = stdout
-	cmd.Stderr = stderr
-	err := cmd.Run()
-	if err != nil {
-		if stderr.Len() > 0 {
-			return "", errors.New(string(stderr.Bytes()))
-		}
-		return "", err
-	}
-	var stdoutJson struct {
-		ImportPath string
-	}
-	err = json.Unmarshal(stdout.Bytes(), &stdoutJson)
-	if err != nil {
-		return "", err
-	}
-	return stdoutJson.ImportPath, nil
+func findPackageInDir(dir string) (pkg *build.Package, err error) {
+	return build.ImportDir(dir, build.ImportComment)
 }
 
 func parsePackage(path string) (pkg *types.Package, err error) {
