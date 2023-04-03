@@ -61,7 +61,9 @@ func main() {
 		dstPkgName = srcPkg.Name()
 	}
 	var dstPkgPath string
-	if dstPkg != nil {
+	if *dstPkgPathFlag != "" {
+		dstPkgPath = *dstPkgPathFlag
+	} else if dstPkg != nil {
 		dstPkgPath = dstPkg.Path()
 	} else {
 		dstPkgPath = srcPkg.Path()
