@@ -1,6 +1,8 @@
 package main
 
 import (
+	"bytes"
+	"encoding/json"
 	"flag"
 	"fmt"
 	"go/build"
@@ -9,6 +11,7 @@ import (
 	"go/types"
 	"io"
 	"os"
+	"os/exec"
 	"path"
 	"strings"
 
@@ -39,33 +42,30 @@ func main() {
 		printError("failed to parse package", err)
 		return
 	}
-	var dstPkg *build.Package
+	var dstPkgPath string
 	if *dstPkgPathFlag != "" {
-		dstPkg, err = findPackage(*dstPkgPathFlag)
+		dstPkgPath = *dstPkgPathFlag
 	} else if *dstFileFlag != "" {
 		dstPkgDir, _ := path.Split(*dstFileFlag)
-		dstPkg, err = findPackageInDir(dstPkgDir)
-	}
-	// ignore destination package errors
-	if err != nil {
-		dstPkg = nil
-		err = nil
+		dstPkgPath, err = resolvePackagePath(dstPkgDir)
+		if err != nil {
+			printWarning(fmt.Sprintf("failed to resolve destination package path, using '%s'", srcPkg.Path()), err)
+			dstPkgPath = srcPkg.Path()
+			err = nil
+		}
+	} else {
+		dstPkgPath = srcPkg.Path()
 	}
 	var dstPkgName string
 	if *dstPkgFlag != "" {
 		dstPkgName = *dstPkgFlag
-	} else if dstPkg != nil {
-		dstPkgName = dstPkg.Name
 	} else {
-		dstPkgName = srcPkg.Name()
-	}
-	var dstPkgPath string
-	if *dstPkgPathFlag != "" {
-		dstPkgPath = *dstPkgPathFlag
-	} else if dstPkg != nil {
-		dstPkgPath = dstPkg.ImportPath
-	} else {
-		dstPkgPath = srcPkg.Path()
+		dstPkgName, err = resolvePackageName(dstPkgPath)
+		if err != nil {
+			printWarning(fmt.Sprintf("failed to resolve destination package name, using %s", srcPkg.Name()), err)
+			dstPkgName = srcPkg.Name()
+			err = nil
+		}
 	}
 	options := parseChainOptions(args[1:])
 	chains, err := findChainsToGenerate(srcPkg, options)
@@ -101,16 +101,39 @@ func main() {
 	}
 }
 
-func findPackage(path string) (pkg *build.Package, err error) {
-	return build.Import(path, ".", build.ImportComment)
-}
-
-func findPackageInDir(dir string) (pkg *build.Package, err error) {
-	return build.ImportDir(dir, build.ImportComment)
-}
-
-func parsePackage(path string) (pkg *types.Package, err error) {
+func parsePackage(path string) (*types.Package, error) {
 	return importer.ForCompiler(token.NewFileSet(), "source", nil).Import(path)
+}
+
+func resolvePackagePath(dir string) (string, error) {
+	stdout := bytes.NewBuffer(nil)
+	stderr := bytes.NewBuffer(nil)
+	cmd := exec.Command("go", "list", "-json", dir)
+	cmd.Stdout = stdout
+	cmd.Stderr = stderr
+	err := cmd.Run()
+	if err != nil {
+		if stderr.Len() > 0 {
+			return "", errors.New(string(stderr.Bytes()))
+		}
+		return "", err
+	}
+	var stdoutJson struct {
+		ImportPath string
+	}
+	err = json.Unmarshal(stdout.Bytes(), &stdoutJson)
+	if err != nil {
+		return "", err
+	}
+	return stdoutJson.ImportPath, nil
+}
+
+func resolvePackageName(path string) (string, error) {
+	pkg, err := build.Import(path, ".", build.ImportComment)
+	if err != nil {
+		return "", err
+	}
+	return pkg.Name, nil
 }
 
 func parseChainOptions(options []string) map[string]string {
@@ -197,6 +220,10 @@ func printInvalidArgumentError(err string) {
 	fmt.Printf("%s\n\n%s\n", err, usage)
 }
 
+func printWarning(description string, err error) {
+	fmt.Printf("WARNING: %s\n\t%v", description, err)
+}
+
 func printError(description string, err error) {
-	fmt.Printf("%s:\n\t%v", description, err)
+	fmt.Printf("ERROR: %s\n\t%v", description, err)
 }
