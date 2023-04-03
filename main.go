@@ -101,11 +101,31 @@ func main() {
 }
 
 func parsePackageInDir(dir string) (*types.Package, error) {
+	ok, err := isGoPackage(dir)
+	if err != nil {
+		return nil, err
+	}
+	if !ok {
+		return nil, nil
+	}
 	pkgPath, err := resolvePackagePath(dir)
 	if err != nil {
 		return nil, err
 	}
 	return parsePackage(pkgPath)
+}
+
+func isGoPackage(dir string) (found bool, err error) {
+	entries, err := os.ReadDir(dir)
+	if err != nil {
+		return false, err
+	}
+	for _, entry := range entries {
+		if strings.HasSuffix(entry.Name(), ".go") {
+			return true, nil
+		}
+	}
+	return false, nil
 }
 
 func resolvePackagePath(path string) (string, error) {
