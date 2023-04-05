@@ -3,17 +3,18 @@ package main
 import (
 	"context"
 	"fmt"
+	"github.com/CherkashinEvgeny/gochain/chain"
 )
 
 func main() {
-	chain := MapChain{}
-	chain.Register(10, func(m Map) Map {
+	mapChain := MapChain{}
+	mapChain.Register(chain.Impl, func(m Map) Map {
 		return &LocalMap{}
 	})
-	chain.Register(8, func(m Map) Map {
+	mapChain.Register(chain.Lowest, func(m Map) Map {
 		return Interceptor{m}
 	})
-	m := chain.Instance()
+	m := mapChain.Instance()
 	_ = m.Set(context.Background(), "test", []byte{0})
 	fmt.Println(m.Get(context.Background(), "test"))
 	_ = m.Set(context.Background(), "lucky", []byte{0})

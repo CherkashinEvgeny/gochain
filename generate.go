@@ -70,7 +70,7 @@ func generateRegisterMethod(elemName string, pkg *types.Package, chainCfg chainC
 func generateRegisterMethodSignature(pkg *types.Package, chainCfg chainConfig) Code {
 	return Sign(
 		In(
-			Param("priority", Int, false),
+			Param("priority", SmartQual("chain", "github.com/CherkashinEvgeny/gochain/chain", "Priority"), false),
 			Param("f", FuncType(Sign(
 				In(Param("", SmartQual(pkg.Name(), pkg.Path(), chainCfg.IfaceName), false)),
 				Out(Param("", SmartQual(pkg.Name(), pkg.Path(), chainCfg.IfaceName), false)),
@@ -100,7 +100,7 @@ func generateRegisterMethodBody(elemName string) Code {
 func generateChainElem(elemName string, pkg *types.Package, chainCfg chainConfig) Code {
 	return Blocks(
 		Type(elemName, Struct(FieldDecls(
-			FieldDecl("priority", Int),
+			FieldDecl("priority", SmartQual("chain", "github.com/CherkashinEvgeny/gochain/chain", "Priority")),
 			FieldDecl("impl", SmartQual(pkg.Name(), pkg.Path(), chainCfg.IfaceName)),
 			FieldDecl("next", Ptr(Id(elemName))),
 		))),
