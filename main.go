@@ -38,6 +38,7 @@ func main() {
 		printInvalidArgumentError("source package is empty")
 		return
 	}
+
 	srcPkg, err := parsePackage(srcPkgArg)
 	if err != nil {
 		printError("failed to parse package", err)
@@ -74,6 +75,7 @@ func main() {
 		printError("failed to find chains to generate", err)
 		return
 	}
+
 	code, err := generate(config{
 		DstPkgName:     dstPkgName,
 		DstPackagePath: dstPkgPath,
