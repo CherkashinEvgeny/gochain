@@ -12,25 +12,25 @@ func (c *MapChain) Instance() Map {
 	return &c.root
 }
 
-func (c *MapChain) Register(priority chain.Priority, f func(Map) Map) {
+func (c *MapChain) Register(order chain.Order, f func(Map) Map) {
 	elem := &c.root
-	for elem.next != nil && elem.priority < priority {
+	for elem.next != nil && elem.order < order {
 		elem = elem.next
 	}
 	nextElem := &mapChainElem{
-		priority: elem.priority,
-		impl:     elem.impl,
-		next:     elem.next,
+		order: elem.order,
+		impl:  elem.impl,
+		next:  elem.next,
 	}
-	elem.priority = priority
+	elem.order = order
 	elem.impl = f(nextElem)
 	elem.next = nextElem
 }
 
 type mapChainElem struct {
-	priority chain.Priority
-	impl     Map
-	next     *mapChainElem
+	order chain.Order
+	impl  Map
+	next  *mapChainElem
 }
 
 func (e *mapChainElem) Delete(arg0 context.Context, arg1 string) error {
